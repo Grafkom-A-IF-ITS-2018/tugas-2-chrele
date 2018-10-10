@@ -146,6 +146,45 @@
         return degrees * Math.PI / 180;
     }
 
+    var currentlyPressedKeys = {};
+    var z = -50.0;
+    var x = 0.0;
+    var y = 0.0;
+
+    function handleKeyDown(event) {
+        currentlyPressedKeys[event.keyCode] = true
+    }
+    function handleKeyUp(event) {
+        currentlyPressedKeys[event.keyCode] = false
+    }
+
+    function handleKeys() {
+        if (currentlyPressedKeys[33]) {
+            // Page Up
+            z -= 0.25;
+        }
+        if (currentlyPressedKeys[34]) {
+            // Page Down
+            z += 0.25;
+        }
+        if (currentlyPressedKeys[37]) {
+            // Left cursor key
+            x += 0.25;
+        }
+        if (currentlyPressedKeys[39]) {
+            // Right cursor key
+            x -= 0.25;
+        }
+        if (currentlyPressedKeys[38]) {
+            // Up cursor key
+            y -= 0.25;
+        }
+        if (currentlyPressedKeys[40]) {
+            // Down cursor key
+            y += 0.25;
+        }
+    }
+
     var alphabetVertexPositionBuffer;
     var alphabetVertexColorBuffer;
     var alphabetVertexIndexBuffer;
@@ -324,8 +363,8 @@
 
         mat4.identity(mvMatrix);
 
-        mat4.translate(mvMatrix, [0.0, 0.0, -20.0]);
-        mat4.rotate(mvMatrix, mvMatrix, degToRad(rCube), [0.0, 0.0, 0.0]);
+        mat4.translate(mvMatrix, [x, y, z]);
+        mat4.rotate(mvMatrix, degToRad(rCube), [0.0, 1.0, 0.0]);
 
         mvPushMatrix();
 
@@ -338,10 +377,10 @@
         setMatrixUniforms();
         gl.drawArrays(gl.LINE_LOOP, 0, cubeVertexPositionBuffer.numItems);
         mvPopMatrix();
-        
+        mat4.translate(mvMatrix, [0.0, 0.0, 0.0]);
         mvPushMatrix();
 
-        mat4.translate(mvMatrix, mvMatrix, [alphabetPosX,alphabetPosY,alphabetPosZ]);
+        mat4.translate(mvMatrix, [alphabetPosX,alphabetPosY,alphabetPosZ]);
         mat4.rotate(mvMatrix, degToRad(rAlphabet), [0.0, 1.0, 0.0]);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, alphabetVertexPositionBuffer);
@@ -356,9 +395,10 @@
             alphabetCurrentPos.push(alphabetCurPos);
         }
 
-        crashCheck(alphabetCurrentPos);
+        
         setMatrixUniforms();
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, alphabetVertexPositionBuffer.numItems);
+        crashCheck(alphabetCurrentPos);
         mvPopMatrix();
 
     }
@@ -369,8 +409,9 @@
         var timeNow = new Date().getTime();
         if (lastTime != 0) {
             var elapsed = timeNow - lastTime;
-
-            rAlphabet += ((75 * elapsed) / 1000.0) * alphabetRotation;
+            rCube += ((25 * elapsed) / 1000.0);
+            rAlphabet += ((75 * elapsed) / 1000.0);
+            bounce();
         }
         lastTime = timeNow;
     }
@@ -386,48 +427,42 @@
     function crashCheck(alphabetCurrentPos) {
         for (var i = 0; i < alphabetCurrentPos.length; i++) {
             if ((alphabetCurrentPos[i][0] >= 10.0) || (alphabetCurrentPos[i][0] <= -10.0)) {
-                alphabetDirectionX *= (-1.0);
-                alphabetRotation *= (-1.0);
+                if ((alphabetDirectionX < 0) || (alphabetDirectionX > 0)) {
+                    alphabetDirectionX *= (-1.0);
+                    alphabetRotation *= (-1.0);
+                }
+                bounce();
                 return;
             }
             if ((alphabetCurrentPos[i][1] >= 10.0) || (alphabetCurrentPos[i][1] <= -10.0)) {
-                alphabetDirectionY *= (-1.0);
-                alphabetRotation *= (-1.0);
+                if ((alphabetDirectionY < 0) || (alphabetDirectionY > 0)) {
+                    alphabetDirectionY *= (-1.0);
+                    alphabetRotation *= (-1.0);
+                }
+                bounce();
                 return;
             }
             if ((alphabetCurrentPos[i][2] >= 10.0) || (alphabetCurrentPos[i][2] <= -10.0)) {
-                alphabetDirectionZ *= (-1.0);
-                alphabetRotation *= (-1.0);
+                if ((alphabetDirectionZ < 0) || (alphabetDirectionZ > 0)) {
+                    alphabetDirectionZ *= (-1.0);
+                    alphabetRotation *= (-1.0);
+                }
+                bounce();
                 return;
             }
         }
     }
 
-    var currentlyPressedKeys = {};
-    var z = -20.0;
-
-    function handleKeyDown(event) {
-        currentlyPressedKeys[event.keyCode] = true
-    }
-    function handleKeyUp(event) {
-        currentlyPressedKeys[event.keyCode] = false
-    }
-
-    function handleKeys() {
-        if (currentlyPressedKeys[33]) {
-            // Page Up
-            z -= 0.05;
-        }
-        if (currentlyPressedKeys[34]) {
-            // Page Down
-            z += 0.05;
-        }
+    function bounce() {
+        alphabetPosX += 0.25 * alphabetDirectionX;
+        alphabetPosY += 0.25 * alphabetDirectionY;
+        alphabetPosZ += 0.25 * alphabetDirectionZ;
     }
 
     function tick() {
         requestAnimFrame(tick);
-        drawScene();
         handleKeys();
+        drawScene();
         animate();
     }
 
@@ -441,12 +476,10 @@
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.enable(gl.DEPTH_TEST);
 
-        tick();
-
         document.onkeydown = handleKeyDown;
         document.onkeyup = handleKeyUp;
 
-        
+        tick();
     }
 
 </script>
