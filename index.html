@@ -1,0 +1,461 @@
+<html>
+
+<head>
+<title>Learning WebGL &mdash; lesson 3</title>
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+
+<script type="text/javascript" src="glMatrix-0.9.5.min.js"></script>
+<script type="text/javascript" src="webgl-utils.js"></script>
+
+<script id="shader-fs" type="x-shader/x-fragment">
+    precision mediump float;
+
+    varying vec4 vColor;
+
+    void main(void) {
+        gl_FragColor = vColor;
+    }
+</script>
+
+<script id="shader-vs" type="x-shader/x-vertex">
+    attribute vec3 aVertexPosition;
+    attribute vec4 aVertexColor;
+
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+
+    varying vec4 vColor;
+
+    void main(void) {
+        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+        vColor = aVertexColor;
+    }
+</script>
+
+
+<script type="text/javascript">
+
+    var gl;
+
+    function initGL(canvas) {
+        try {
+            gl = canvas.getContext("experimental-webgl");
+            gl.viewportWidth = canvas.width;
+            gl.viewportHeight = canvas.height;
+        } catch (e) {
+        }
+        if (!gl) {
+            alert("Could not initialise WebGL, sorry :-(");
+        }
+    }
+
+
+    function getShader(gl, id) {
+        var shaderScript = document.getElementById(id);
+        if (!shaderScript) {
+            return null;
+        }
+
+        var str = "";
+        var k = shaderScript.firstChild;
+        while (k) {
+            if (k.nodeType == 3) {
+                str += k.textContent;
+            }
+            k = k.nextSibling;
+        }
+
+        var shader;
+        if (shaderScript.type == "x-shader/x-fragment") {
+            shader = gl.createShader(gl.FRAGMENT_SHADER);
+        } else if (shaderScript.type == "x-shader/x-vertex") {
+            shader = gl.createShader(gl.VERTEX_SHADER);
+        } else {
+            return null;
+        }
+
+        gl.shaderSource(shader, str);
+        gl.compileShader(shader);
+
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(shader));
+            return null;
+        }
+
+        return shader;
+    }
+
+
+    var shaderProgram;
+
+    function initShaders() {
+        var fragmentShader = getShader(gl, "shader-fs");
+        var vertexShader = getShader(gl, "shader-vs");
+
+        shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertexShader);
+        gl.attachShader(shaderProgram, fragmentShader);
+        gl.linkProgram(shaderProgram);
+
+        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+            alert("Could not initialise shaders");
+        }
+
+        gl.useProgram(shaderProgram);
+
+        shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+        gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+
+        shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
+        gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
+
+        shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
+        shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+    }
+
+    //Texture
+    //here
+
+    //here
+
+    var mvMatrix = mat4.create();
+    var mvMatrixStack = [];
+    var pMatrix = mat4.create();
+
+    function mvPushMatrix() {
+        var copy = mat4.create();
+        mat4.set(mvMatrix, copy);
+        mvMatrixStack.push(copy);
+    }
+
+    function mvPopMatrix() {
+        if (mvMatrixStack.length == 0) {
+            throw "Invalid popMatrix!";
+        }
+        mvMatrix = mvMatrixStack.pop();
+    }
+
+
+    function setMatrixUniforms() {
+        gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+        gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+    }
+
+
+    function degToRad(degrees) {
+        return degrees * Math.PI / 180;
+    }
+
+    var alphabetVertexPositionBuffer;
+    var alphabetVertexColorBuffer;
+    var alphabetVertexIndexBuffer;
+    var alphabetVertex = [];
+    var cubeVertexPositionBuffer;
+    var cubeVertexColorBuffer;
+    var cubeVertexIndexBuffer;
+    var cubeVertex = [];
+
+    function initBuffers() {
+        alphabetVertexPositionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, alphabetVertexPositionBuffer);
+        vertices = [
+            //front layer
+            -1.0,  1.5, 0.2,
+            -0.5,    1, 0.2,
+            -1.0, -1.5, 0.2,
+            -0.5,   -1, 0.2,
+               1, -1.5, 0.2,
+             0.7,   -1, 0.2,
+             1.5,   -1, 0.2,
+               1, -0.7, 0.2,
+             1.5,    1, 0.2,
+               1,  0.7, 0.2,
+               1,  1.5, 0.2,
+             0.7,    1, 0.2,
+            -1.0,  1.5, 0.2,
+            -0.5,    1, 0.2,
+            //Outer layer
+            -1.0,  1.5, -0.2,
+            -1.0,  1.5,  0.2,
+               1,  1.5,  0.2,
+               1,  1.5, -0.2,
+             1.5,    1,  0.2,
+             1.5,    1, -0.2,
+             1.5,   -1,  0.2,
+             1.5,   -1, -0.2,
+               1, -1.5,  0.2,
+               1, -1.5, -0.2,
+            -1.0, -1.5,  0.2,
+            -1.0, -1.5, -0.2,
+            -1.0,  1.5,  0.2,
+            -1.0,  1.5, -0.2,
+            //back layer
+            -0.5,    1, -0.2,
+            -1.0, -1.5, -0.2,
+            -0.5,   -1, -0.2,
+               1, -1.5, -0.2,
+             0.7,   -1, -0.2,
+             1.5,   -1, -0.2,
+               1, -0.7, -0.2,
+             1.5,    1, -0.2,
+               1,  0.7, -0.2,
+               1,  1.5, -0.2,
+             0.7,    1, -0.2,
+            -1.0,  1.5, -0.2,
+            -0.5,    1, -0.2,
+            //inner layer
+            -0.5,    1,  0.2,
+             0.7,    1, -0.2,
+             0.7,    1,  0.2,
+               1,  0.7, -0.2,
+               1,  0.7,  0.2,
+               1, -0.7, -0.2,
+               1, -0.7,  0.2,
+             0.7,   -1, -0.2,
+             0.7,   -1,  0.2,
+            -0.5,   -1, -0.2,
+            -0.5,   -1,  0.2,
+            -0.5,    1, -0.2,
+            -0.5,    1,  0.2
+            ];
+
+        for (var i = 0; i < vertices.length; i += 3) {
+            alphabetVertex.push([vertices[i], vertices[i+1], vertices[i+2], 1.0]);
+        }
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+        alphabetVertexPositionBuffer.itemSize = 3;
+        alphabetVertexPositionBuffer.numItems = 54;
+
+        alphabetVertexColorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, alphabetVertexColorBuffer);
+        colors = []
+        for (var i=0; i < 54; i++) {
+            if (i < 14) {
+                colors = colors.concat([0.5, 0.5, 1.0, 1.0]);
+            }
+            else if (i < 28) {
+                colors = colors.concat([0.5, 0.0, 1.0, 1.0]);
+            }
+            else if (i < 41) {
+                colors = colors.concat([0.0, 0.5, 1.0, 1.0]);
+            }
+            else if (i < 54) {
+                colors = colors.concat([0.0, 0.0, 1.0, 1.0]);
+            }
+        }
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+        alphabetVertexColorBuffer.itemSize = 4;
+        alphabetVertexColorBuffer.numItems = 54;
+
+        cubeVertexPositionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
+        vertices = [
+             // Front face
+            -10, -10,  10,
+             10, -10,  10,
+             10,  10,  10,
+            -10,  10,  10,
+
+            // Back face
+            -10,  10, -10,
+            -10, -10, -10,
+             10, -10, -10,
+             10,  10, -10,
+            
+
+            // Top face
+            -10,  10, -10,
+            -10,  10,  10,
+             10,  10,  10,
+             10,  10, -10,
+
+            // Bottom face
+            10, -10, -10,
+            -10, -10, -10,
+            -10, -10,  10,
+             10, -10,  10,
+            
+
+            // Right face
+             10, -10, -10,
+             10,  10, -10,
+             10,  10,  10,
+             10, -10,  10,
+
+            // Left face
+            -10, -10,  10,
+            -10, -10, -10,
+            -10,  10, -10,
+            -10,  10,  10
+            
+        ]
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+        cubeVertexPositionBuffer.itemSize = 3;
+        cubeVertexPositionBuffer.numItems = 24;
+
+        cubeVertexColorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexColorBuffer);
+        colors = []
+        for (var i=0; i < 24; i++) {
+            colors = colors.concat([0.5, 0.5, 1.0, 1.0]);
+        }
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+        cubeVertexColorBuffer.itemSize = 4;
+        cubeVertexColorBuffer.numItems = 24;
+    }
+
+    var rAlphabet = 0;
+    var rCube = 0;
+    var alphabetPosX = 0;
+    var alphabetPosY = 0;
+    var alphabetPosZ = 0;
+    var alphabetDirectionX = 1.0;
+    var alphabetDirectionY = 1.0;
+    var alphabetDirectionZ = 1.0;
+    var alphabetRotation = 1.0;
+
+    function drawScene() {
+        var alphabetCurrentPos = [];
+
+        gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+
+        mat4.identity(mvMatrix);
+
+        mat4.translate(mvMatrix, [0.0, 0.0, -20.0]);
+        mat4.rotate(mvMatrix, mvMatrix, degToRad(rCube), [0.0, 0.0, 0.0]);
+
+        mvPushMatrix();
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
+        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, cubeVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexColorBuffer);
+        gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, cubeVertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        setMatrixUniforms();
+        gl.drawArrays(gl.LINE_LOOP, 0, cubeVertexPositionBuffer.numItems);
+        mvPopMatrix();
+        
+        mvPushMatrix();
+
+        mat4.translate(mvMatrix, mvMatrix, [alphabetPosX,alphabetPosY,alphabetPosZ]);
+        mat4.rotate(mvMatrix, degToRad(rAlphabet), [0.0, 1.0, 0.0]);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, alphabetVertexPositionBuffer);
+        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, alphabetVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, alphabetVertexColorBuffer);
+        gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, alphabetVertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, alphabetVertexIndexBuffer)
+        for (var i = 0; i < alphabetVertex.length; i++) {
+            var alphabetCurPos = matrixMul(mvMatrix, alphabetVertex[i])
+            alphabetCurrentPos.push(alphabetCurPos);
+        }
+
+        crashCheck(alphabetCurrentPos);
+        setMatrixUniforms();
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, alphabetVertexPositionBuffer.numItems);
+        mvPopMatrix();
+
+    }
+
+    var lastTime = 0;
+
+    function animate() {
+        var timeNow = new Date().getTime();
+        if (lastTime != 0) {
+            var elapsed = timeNow - lastTime;
+
+            rAlphabet += ((75 * elapsed) / 1000.0) * alphabetRotation;
+        }
+        lastTime = timeNow;
+    }
+
+    function matrixMul(mvMatrix, alphabetVertex) {
+        var alphabetXPos = mvMatrix[0] * alphabetVertex[0] + mvMatrix[4] * alphabetVertex[1] + mvMatrix[8] * alphabetVertex[2] + mvMatrix[12] * alphabetVertex[3];
+        var alphabetYPos = mvMatrix[1] * alphabetVertex[0] + mvMatrix[5] * alphabetVertex[1] + mvMatrix[9] * alphabetVertex[2] + mvMatrix[13] * alphabetVertex[3];
+        var alphabetZPos = mvMatrix[2] * alphabetVertex[0] + mvMatrix[6] * alphabetVertex[1] + mvMatrix[10] * alphabetVertex[2] + mvMatrix[14] * alphabetVertex[3];
+        var temp = mvMatrix[3] * alphabetVertex[0] + mvMatrix[7] * alphabetVertex[1] + mvMatrix[11] * alphabetVertex[2] + mvMatrix[15] * alphabetVertex[3];
+        return [alphabetXPos, alphabetYPos, alphabetZPos, temp]
+    }
+
+    function crashCheck(alphabetCurrentPos) {
+        for (var i = 0; i < alphabetCurrentPos.length; i++) {
+            if ((alphabetCurrentPos[i][0] >= 10.0) || (alphabetCurrentPos[i][0] <= -10.0)) {
+                alphabetDirectionX *= (-1.0);
+                alphabetRotation *= (-1.0);
+                return;
+            }
+            if ((alphabetCurrentPos[i][1] >= 10.0) || (alphabetCurrentPos[i][1] <= -10.0)) {
+                alphabetDirectionY *= (-1.0);
+                alphabetRotation *= (-1.0);
+                return;
+            }
+            if ((alphabetCurrentPos[i][2] >= 10.0) || (alphabetCurrentPos[i][2] <= -10.0)) {
+                alphabetDirectionZ *= (-1.0);
+                alphabetRotation *= (-1.0);
+                return;
+            }
+        }
+    }
+
+    var currentlyPressedKeys = {};
+    var z = -20.0;
+
+    function handleKeyDown(event) {
+        currentlyPressedKeys[event.keyCode] = true
+    }
+    function handleKeyUp(event) {
+        currentlyPressedKeys[event.keyCode] = false
+    }
+
+    function handleKeys() {
+        if (currentlyPressedKeys[33]) {
+            // Page Up
+            z -= 0.05;
+        }
+        if (currentlyPressedKeys[34]) {
+            // Page Down
+            z += 0.05;
+        }
+    }
+
+    function tick() {
+        requestAnimFrame(tick);
+        drawScene();
+        handleKeys();
+        animate();
+    }
+
+
+    function webGLStart() {
+        var canvas = document.getElementById("lesson03-canvas");
+        initGL(canvas);
+        initShaders()
+        initBuffers();
+
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.enable(gl.DEPTH_TEST);
+
+        tick();
+
+        document.onkeydown = handleKeyDown;
+        document.onkeyup = handleKeyUp;
+
+        
+    }
+
+</script>
+
+</head>
+
+
+<body onload="webGLStart();">
+    <canvas id="lesson03-canvas" style="border: none;" width="500" height="500"></canvas>
+</body>
+
+</html>
