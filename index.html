@@ -147,7 +147,7 @@
     }
 
     var currentlyPressedKeys = {};
-    var z = -200.0;
+    var z = -50.0;
     var x = 0.0;
     var y = 0.0;
 
@@ -328,6 +328,16 @@
             -10.0,  10.0,  10.0
             
         ]
+        cubeVertex.push([-10.0,  10.0,  10.0, 1.0]);
+        cubeVertex.push([ 10.0,  10.0,  10.0, 1.0]);
+        cubeVertex.push([ 10.0, -10.0,  10.0, 1.0]);
+        cubeVertex.push([-10.0, -10.0,  10.0, 1.0]);
+        cubeVertex.push([-10.0, -10.0, -10.0, 1.0]);
+        cubeVertex.push([-10.0,  10.0, -10.0, 1.0]);
+        cubeVertex.push([-10.0,  10.0, -10.0, 1.0]);
+        cubeVertex.push([ 10.0,  10.0, -10.0, 1.0]);
+        cubeVertex.push([ 10.0, -10.0, -10.0, 1.0]);
+
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
         cubeVertexPositionBuffer.itemSize = 3;
         cubeVertexPositionBuffer.numItems = 24;
@@ -355,6 +365,7 @@
 
     function drawScene() {
         var alphabetCurrentPos = [];
+        var cubeCurrentPos = [];
 
         gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -364,7 +375,7 @@
         mat4.identity(mvMatrix);
 
         mat4.translate(mvMatrix, [x, y, z]);
-        mat4.rotate(mvMatrix, degToRad(rCube), [0.0, 1.0, 0.0]);
+        mat4.rotate(mvMatrix, degToRad(rCube), [0.0, 0.0, 0.0]);
 
         mvPushMatrix();
 
@@ -374,6 +385,10 @@
         gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexColorBuffer);
         gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, cubeVertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
+        for (var i = 0; i < cubeVertex.length; i++) {
+            var cubeCurPos = matrixMul(mvMatrix, cubeVertex[i]);
+            cubeCurrentPos.push(cubeCurPos);
+        }
         setMatrixUniforms();
         gl.drawArrays(gl.LINE_LOOP, 0, cubeVertexPositionBuffer.numItems);
         mvPopMatrix();
@@ -398,7 +413,7 @@
         
         setMatrixUniforms();
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, alphabetVertexPositionBuffer.numItems);
-        crashCheck(alphabetCurrentPos);
+        crashCheck(alphabetCurrentPos, cubeCurrentPos);
         mvPopMatrix();
 
     }
@@ -410,7 +425,7 @@
         if (lastTime != 0) {
             var elapsed = timeNow - lastTime;
             rCube += ((10.0 * elapsed) / 1000.0);
-            rAlphabet += ((75 * elapsed) / 1000.0);
+            rAlphabet += ((75 * elapsed) / 1000.0) * alphabetRotation;
             bounce();
         }
         lastTime = timeNow;
@@ -424,9 +439,9 @@
         return [alphabetXPos, alphabetYPos, alphabetZPos, temp]
     }
 
-    function crashCheck(alphabetCurrentPos) {
+    function crashCheck(alphabetCurrentPos, cubeCurrentPos) {
         for (var i = 0; i < alphabetCurrentPos.length; i++) {
-            if (alphabetCurrentPos[i][0] >= 10.0)  {
+            if (alphabetCurrentPos[i][0] >= cubeCurrentPos[1][0])  {
                 if (alphabetDirectionX > 0) {
                     alphabetDirectionX *= (-1.0);
                     alphabetRotation *= (-1.0);
@@ -434,7 +449,7 @@
                 bounce();
                 return;
             } 
-            if (alphabetCurrentPos[i][0] <= -10.0) {
+            if (alphabetCurrentPos[i][0] <= cubeCurrentPos[0][0]) {
                 if (alphabetDirectionX < 0) {
                     alphabetDirectionX *= (-1.0);
                     alphabetRotation *= (-1.0);
@@ -442,7 +457,7 @@
                 bounce();
                 return;
             }
-            if (alphabetCurrentPos[i][1] <= -10.0) {
+            if (alphabetCurrentPos[i][1] <= cubeCurrentPos[2][1]) {
                 if (alphabetDirectionY < 0) {
                     alphabetDirectionY *= (-1.0);
                     alphabetRotation *= (-1.0);
@@ -450,7 +465,7 @@
                 bounce();
                 return;
             }
-            if (alphabetCurrentPos[i][1] >= 10.0) {
+            if (alphabetCurrentPos[i][1] >= cubeCurrentPos[1][1]) {
                 if (alphabetDirectionY > 0) {
                     alphabetDirectionY *= (-1.0);
                     alphabetRotation *= (-1.0);
@@ -458,7 +473,7 @@
                 bounce();
                 return;
             }
-            if (alphabetCurrentPos[i][2] <= -10.0) {
+            if (alphabetCurrentPos[i][2] <= cubeCurrentPos[4][2]) {
                 if (alphabetDirectionZ < 0) {
                     alphabetDirectionZ *= (-1.0);
                     alphabetRotation *= (-1.0);
@@ -466,7 +481,7 @@
                 bounce();
                 return;
             }
-            if (alphabetCurrentPos[i][2] >= 10.0) {
+            if (alphabetCurrentPos[i][2] >= cubeCurrentPos[0][2]) {
                 if (alphabetDirectionZ > 0) {
                     alphabetDirectionZ *= (-1.0);
                     alphabetRotation *= (-1.0);
@@ -513,6 +528,9 @@
 
 <body onload="webGLStart();">
     <canvas id="lesson03-canvas" style="border: none;" width="500" height="500"></canvas>
+    <p>
+        Tekan PageUp/PageDown u/ zoomin dan out
+    </p>
 </body>
 
 </html>
