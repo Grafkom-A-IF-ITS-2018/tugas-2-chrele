@@ -147,7 +147,7 @@
     }
 
     var currentlyPressedKeys = {};
-    var z = -50.0;
+    var z = -100.0;
     var x = 0.0;
     var y = 0.0;
 
@@ -309,7 +309,7 @@
              10,  10, -10,
 
             // Bottom face
-            10, -10, -10,
+             10, -10, -10,
             -10, -10, -10,
             -10, -10,  10,
              10, -10,  10,
@@ -359,7 +359,7 @@
         gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+        mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 1000.0, pMatrix);
 
         mat4.identity(mvMatrix);
 
@@ -409,7 +409,7 @@
         var timeNow = new Date().getTime();
         if (lastTime != 0) {
             var elapsed = timeNow - lastTime;
-            rCube += ((25 * elapsed) / 1000.0);
+            rCube += ((10 * elapsed) / 1000.0);
             rAlphabet += ((75 * elapsed) / 1000.0);
             bounce();
         }
@@ -426,24 +426,48 @@
 
     function crashCheck(alphabetCurrentPos) {
         for (var i = 0; i < alphabetCurrentPos.length; i++) {
-            if ((alphabetCurrentPos[i][0] >= 10.0) || (alphabetCurrentPos[i][0] <= -10.0)) {
-                if ((alphabetDirectionX < 0) || (alphabetDirectionX > 0)) {
+            if (alphabetCurrentPos[i][0] >= 10.0)  {
+                if (alphabetDirectionX > 0) {
+                    alphabetDirectionX *= (-1.0);
+                    alphabetRotation *= (-1.0);
+                }
+                bounce();
+                return;
+            } 
+            if (alphabetCurrentPos[i][0] <= -10.0) {
+                if (alphabetDirectionX < 0) {
                     alphabetDirectionX *= (-1.0);
                     alphabetRotation *= (-1.0);
                 }
                 bounce();
                 return;
             }
-            if ((alphabetCurrentPos[i][1] >= 10.0) || (alphabetCurrentPos[i][1] <= -10.0)) {
-                if ((alphabetDirectionY < 0) || (alphabetDirectionY > 0)) {
+            if (alphabetCurrentPos[i][1] <= -10.0) {
+                if (alphabetDirectionY < 0) {
                     alphabetDirectionY *= (-1.0);
                     alphabetRotation *= (-1.0);
                 }
                 bounce();
                 return;
             }
-            if ((alphabetCurrentPos[i][2] >= 10.0) || (alphabetCurrentPos[i][2] <= -10.0)) {
-                if ((alphabetDirectionZ < 0) || (alphabetDirectionZ > 0)) {
+            if (alphabetCurrentPos[i][1] >= 10.0) {
+                if (alphabetDirectionY > 0) {
+                    alphabetDirectionY *= (-1.0);
+                    alphabetRotation *= (-1.0);
+                }
+                bounce();
+                return;
+            }
+            if (alphabetCurrentPos[i][2] <= -10.0) {
+                if (alphabetDirectionZ < 0) {
+                    alphabetDirectionZ *= (-1.0);
+                    alphabetRotation *= (-1.0);
+                }
+                bounce();
+                return;
+            }
+            if (alphabetCurrentPos[i][2] >= 10.0) {
+                if (alphabetDirectionZ > 0) {
                     alphabetDirectionZ *= (-1.0);
                     alphabetRotation *= (-1.0);
                 }
@@ -454,9 +478,9 @@
     }
 
     function bounce() {
-        alphabetPosX += 0.25 * alphabetDirectionX;
-        alphabetPosY += 0.25 * alphabetDirectionY;
-        alphabetPosZ += 0.25 * alphabetDirectionZ;
+        alphabetPosX += 0.1 * alphabetDirectionX;
+        alphabetPosY += 0.1 * alphabetDirectionY;
+        alphabetPosZ += 0.1 * alphabetDirectionZ;
     }
 
     function tick() {
